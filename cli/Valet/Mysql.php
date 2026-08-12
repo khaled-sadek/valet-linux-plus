@@ -99,6 +99,14 @@ class Mysql
     }
 
     /**
+     * Mysql service status.
+     */
+    public function status(): void
+    {
+        $this->sm->printStatus($this->serviceName());
+    }
+
+    /**
      * Restart the Mysql service.
      */
     public function restart(): void
