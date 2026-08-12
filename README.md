@@ -1,11 +1,10 @@
 <p align="center"><img width="500" src="art/logo.png"></p>
 
-<p align="center">
-<a href="https://scrutinizer-ci.com/g/khaledsadek/valet-linux-plus/?branch=master"><img src="https://scrutinizer-ci.com/g/khaledsadek/valet-linux-plus/badges/quality-score.png?b=master" alt="Scrutinizer"></a>
-<a href="https://packagist.org/packages/khaledsadek/valet-linux-plus"><img src="https://poser.pugx.org/khaledsadek/valet-linux-plus/downloads.svg" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/khaledsadek/valet-linux-plus"><img src="https://poser.pugx.org/khaledsadek/valet-linux-plus/v/stable.svg" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/khaledsadek/valet-linux-plus"><img src="https://poser.pugx.org/khaledsadek/valet-linux-plus/license.svg" alt="License"></a>
-</p>
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/khaledsadek/valet-linux-plus.svg?style=flat-square)](https://packagist.org/packages/khaledsadek/valet-linux-plus)
+[![Total Downloads](https://img.shields.io/packagist/dt/khaledsadek/valet-linux-plus.svg?style=flat-square)](https://packagist.org/packages/khaledsadek/valet-linux-plus)
+[![PHP Version](https://img.shields.io/packagist/php-v/khaledsadek/valet-linux-plus.svg?style=flat-square)](https://packagist.org/packages/khaledsadek/valet-linux-plus)
+[![Laravel Version](https://img.shields.io/badge/Laravel-11+-FF2D20?style=flat-square&logo=laravel)](https://packagist.org/packages/khaledsadek/valet-linux-plus)
+[![License](https://img.shields.io/packagist/l/khaledsadek/valet-linux-plus.svg?style=flat-square)](https://packagist.org/packages/khaledsadek/valet-linux-plus)
 
 ## Introduction
 
