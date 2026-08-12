@@ -1,5 +1,5 @@
 {
-    "name": "genesisweb/valet-linux-plus",
+    "name": "khaledsadek/valet-linux-plus",
     "description": "Advanced local development experience for Linux.",
     "keywords": [
         "laravel",
@@ -14,12 +14,9 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Uttam Rabadiya",
-            "email": "mail@uttam.dev"
-        },
-        {
-            "name": "Divyank Munjapara",
-            "email": "mail@divyank.dev"
+            "name": "Khaled Sadek",
+            "email": "khaledsadek286@gmail.com",
+            "homepage": "https://github.com/khaled-sadek"
         }
     ],
     "autoload": {
@@ -43,11 +40,11 @@
         "ext-mbstring": "*",
         "ext-xml": "*",
         "php": "^8.2",
-        "illuminate/container": "^11.0 || ^12.0",
+        "illuminate/container": "^11.0 || ^12.0 || ^13.0",
         "mnapoli/silly": "^1.9",
         "symfony/process": "^7.0",
         "nategood/httpful": "^1.0",
-        "illuminate/collections": "^11.4 || ^12.0",
+        "illuminate/collections": "^11.4 || ^12.0 || ^13.0",
         "uttamrabadiya/console-components": "^1.0.1"
     },
     "require-dev": {
