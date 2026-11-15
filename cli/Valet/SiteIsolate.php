@@ -200,7 +200,8 @@ class SiteIsolate
     private function addBinFileToConfig(string $version, string $directoryName): void
     {
         $directoryName = $this->removeTld($directoryName);
-        $binaryFile = DevToolsFacade::getBin('php' . $version, ['/usr/local/bin/php']);
+        $cliPath = $this->pm->getPhpCliPath($version);
+        $binaryFile = DevToolsFacade::getBin(basename($cliPath), ['/usr/local/bin/php']);
         /** @var array<string, string> $isolatedConfig */
         $isolatedConfig = $this->config->get('isolated_versions', []);
 

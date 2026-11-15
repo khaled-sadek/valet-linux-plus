@@ -6,6 +6,7 @@ use ConsoleComponents\Writer;
 use Valet\Contracts\PackageManager;
 use Valet\Contracts\ServiceManager;
 use Valet\Facades\DevTools as DevToolsFacade;
+use Valet\PackageManagers\Pacman;
 
 class PhpFpm
 {
@@ -125,7 +126,14 @@ class PhpFpm
         $this->nginx->restart();
         $this->status($version);
         if ($updateCli) {
-            $this->cli->run("update-alternatives --set php /usr/bin/php$version");
+            $cliPath = $this->pm->getPhpCliPath($version);
+            $this->config->set('fallback_binary', $cliPath);
+
+            if ($this->pm instanceof Pacman) {
+                $this->cli->run('ln -snf ' . realpath(VALET_ROOT_PATH . '/php') . ' /usr/local/bin/php');
+            } else {
+                $this->cli->run('update-alternatives --set php ' . $cliPath);
+            }
         }
     }
 
@@ -202,12 +210,22 @@ class PhpFpm
     public function getPhpExecutablePath(string $version = null)
     {
         if (!$version) {
-            return DevToolsFacade::getBin('php', ['/usr/local/bin/php']);
+            $configuredVersion = $this->config->get('php_version');
+            $version = is_string($configuredVersion) ? $configuredVersion : null;
+        }
+
+        if (!$version) {
+            $fallbackBinary = $this->config->get('fallback_binary');
+
+            return is_string($fallbackBinary) && $fallbackBinary !== ''
+                ? $fallbackBinary
+                : DevToolsFacade::getBin('php', ['/usr/local/bin/php']);
         }
 
         $version = $this->normalizePhpVersion($version);
+        $cliPath = $this->pm->getPhpCliPath($version);
 
-        return DevToolsFacade::getBin('php' . $version, ['/usr/local/bin/php']);
+        return DevToolsFacade::getBin(basename($cliPath), ['/usr/local/bin/php']);
     }
 
     public function fpmSocketFile(string $version): string

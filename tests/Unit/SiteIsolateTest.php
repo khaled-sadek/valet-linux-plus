@@ -131,6 +131,12 @@ class SiteIsolateTest extends TestCase
             ->with('domain')
             ->andReturn('test');
 
+        $this->packageManager
+            ->shouldReceive('getPhpCliPath')
+            ->with('7.2')
+            ->once()
+            ->andReturn('/usr/bin/php7.2');
+
         $devTools->shouldReceive('getBin')
             ->once()
             ->with('php7.2', ['/usr/local/bin/php'])

@@ -85,6 +85,34 @@ class ValetTest extends TestCase
     /**
      * @test
      */
+    public function itWillUseDefaultFallbackBinaryWhenInvokedThroughValetPhpShim(): void
+    {
+        $config = Mockery::mock(Configuration::class);
+        swap(Configuration::class, $config);
+        $execPath = $_SERVER['_'] ?? '/usr/bin/php';
+
+        $this->filesystem
+            ->shouldReceive('realpath')
+            ->with($execPath)
+            ->andReturn(VALET_ROOT_PATH . '/php');
+
+        $config->shouldReceive('set')
+            ->with('fallback_binary', '/usr/bin/php')
+            ->once();
+
+        $this->commandLine
+            ->shouldReceive('run')
+            ->with('ln -snf ' . realpath(VALET_ROOT_PATH . '/php') . ' /usr/local/bin/php')
+            ->once();
+
+        $this->valet->symlinkPhpToUsersBin();
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * @test
+     */
     public function itWillUninstallSuccessfully(): void
     {
         $this->filesystem

@@ -50,6 +50,11 @@ interface PackageManager
     public function restartNetworkManager(): void;
 
     /**
+     * Get Php cli executable path from distro
+     */
+    public function getPhpCliPath(string $version): string;
+
+    /**
      * Get package name by service
      */
     public function packageName(string $name): string;

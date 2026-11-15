@@ -12,6 +12,7 @@ use Valet\Contracts\ServiceManager;
 use Valet\DevTools;
 use Valet\Filesystem;
 use Valet\Nginx;
+use Valet\PackageManagers\Pacman;
 use Valet\PhpFpm;
 use Valet\Site;
 use Valet\Tests\TestCase;
@@ -411,12 +412,159 @@ class PhpFpmTest extends TestCase
             ->with($fpmName)
             ->once();
 
+        $this->packageManager
+            ->shouldReceive('getPhpCliPath')
+            ->with($expectedVersion)
+            ->once()
+            ->andReturn('/usr/bin/php' . $expectedVersion);
+
+        $this->config
+            ->shouldReceive('set')
+            ->once()
+            ->with('fallback_binary', '/usr/bin/php' . $expectedVersion);
+
         $this->commandLine
             ->shouldReceive('run')
             ->with('update-alternatives --set php /usr/bin/php' . $expectedVersion)
             ->once();
 
         $this->phpFpm->switchVersion($version, true);
+    }
+
+    /**
+     * @test
+     */
+    public function itWillSwitchCliUsingValetShimOnPacman(): void
+    {
+        Writer::fake();
+
+        $pacman = new Pacman($this->commandLine, $this->serviceManager);
+        $phpFpm = new PhpFpm(
+            $this->config,
+            $pacman,
+            $this->serviceManager,
+            $this->commandLine,
+            $this->filesystem,
+            $this->site,
+            $this->nginx
+        );
+
+        $this->config
+            ->shouldReceive('get')
+            ->with('php_version', PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION)
+            ->once()
+            ->andReturn('8.3');
+
+        $this->commandLine
+            ->shouldReceive('run')
+            ->with('pacman -Qqs php84-fpm')
+            ->once()
+            ->andReturn('php84-fpm');
+
+        $this->filesystem
+            ->shouldReceive('ensureDirExists')
+            ->once()
+            ->with('/var/log', user());
+
+        $this->filesystem
+            ->shouldReceive('get')
+            ->once()
+            ->with(VALET_ROOT_PATH . '/cli/stubs/fpm.conf')
+            ->andReturn('fpm.conf content VALET_USER VALET_GROUP VALET_FPM_SOCKET_FILE');
+
+        $this->filesystem
+            ->shouldReceive('isDir')
+            ->with('/etc/php/8.4/fpm/pool.d')
+            ->once()
+            ->andReturnFalse();
+
+        $this->filesystem
+            ->shouldReceive('isDir')
+            ->with('/etc/php8.4/fpm/pool.d')
+            ->once()
+            ->andReturnFalse();
+
+        $this->filesystem
+            ->shouldReceive('isDir')
+            ->with('/etc/php8.4/php-fpm.d')
+            ->once()
+            ->andReturnFalse();
+
+        $this->filesystem
+            ->shouldReceive('isDir')
+            ->with('/etc/php84/php-fpm.d')
+            ->once()
+            ->andReturnTrue();
+
+        $this->filesystem
+            ->shouldReceive('putAsUser')
+            ->once()
+            ->with(
+                '/etc/php84/php-fpm.d/valet.conf',
+                \sprintf('fpm.conf content %s %s %s', user(), group(), VALET_HOME_PATH . '/valet84.sock')
+            );
+
+        $this->serviceManager
+            ->shouldReceive('restart')
+            ->once()
+            ->with('php84-fpm');
+
+        $this->serviceManager
+            ->expects('disabled')
+            ->once()
+            ->with('php84-fpm')
+            ->andReturnFalse();
+
+        $this->config
+            ->shouldReceive('set')
+            ->once()
+            ->with('php_version', '8.4');
+
+        $this->nginx
+            ->shouldReceive('configuredSites')
+            ->twice()
+            ->andReturn(collect([]));
+
+        $this->config
+            ->shouldReceive('get')
+            ->with('php_version', PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION)
+            ->once()
+            ->andReturn('8.4');
+
+        $this->serviceManager
+            ->shouldReceive('stop')
+            ->with('php83-fpm')
+            ->once();
+
+        $this->nginx
+            ->shouldReceive('installServer')
+            ->with('8.4')
+            ->once();
+
+        $this->nginx
+            ->shouldReceive('restart')
+            ->once();
+
+        $this->serviceManager
+            ->shouldReceive('printStatus')
+            ->with('php84-fpm')
+            ->once();
+
+        $this->config
+            ->shouldReceive('set')
+            ->once()
+            ->with('fallback_binary', '/usr/bin/php84');
+
+        $this->commandLine
+            ->shouldReceive('run')
+            ->with('ln -snf ' . realpath(VALET_ROOT_PATH . '/php') . ' /usr/local/bin/php')
+            ->once();
+
+        $this->commandLine
+            ->shouldNotReceive('run')
+            ->with(Mockery::pattern('/update-alternatives/'));
+
+        $phpFpm->switchVersion('8.4', true, true);
     }
 
     /**
@@ -571,6 +719,12 @@ class PhpFpmTest extends TestCase
         $devTools = Mockery::mock(DevTools::class);
         swap(DevTools::class, $devTools);
 
+        $this->packageManager
+            ->shouldReceive('getPhpCliPath')
+            ->with($version)
+            ->once()
+            ->andReturn('/usr/bin/php' . $version);
+
         $devTools->shouldReceive('getBin')
             ->with('php' . $version, ['/usr/local/bin/php'])
             ->once()
@@ -579,6 +733,87 @@ class PhpFpmTest extends TestCase
         $binFile = $this->phpFpm->getPhpExecutablePath($version);
 
         $this->assertSame('/usr/bin/php' . $version, $binFile);
+    }
+
+    /**
+     * @test
+     */
+    public function itWillGetVersionedExecutablePathForPacman(): void
+    {
+        $devTools = Mockery::mock(DevTools::class);
+        swap(DevTools::class, $devTools);
+
+        $pacman = new Pacman($this->commandLine, $this->serviceManager);
+        $phpFpm = new PhpFpm(
+            $this->config,
+            $pacman,
+            $this->serviceManager,
+            $this->commandLine,
+            $this->filesystem,
+            $this->site,
+            $this->nginx
+        );
+
+        $devTools->shouldReceive('getBin')
+            ->with('php84', ['/usr/local/bin/php'])
+            ->once()
+            ->andReturn('/usr/bin/php84');
+
+        $binFile = $phpFpm->getPhpExecutablePath('8.4');
+
+        $this->assertSame('/usr/bin/php84', $binFile);
+    }
+
+    /**
+     * @test
+     */
+    public function itWillGetConfiguredExecutablePathWhenVersionIsNull(): void
+    {
+        $devTools = Mockery::mock(DevTools::class);
+        swap(DevTools::class, $devTools);
+
+        $this->config
+            ->shouldReceive('get')
+            ->with('php_version')
+            ->once()
+            ->andReturn('8.4');
+
+        $this->packageManager
+            ->shouldReceive('getPhpCliPath')
+            ->with('8.4')
+            ->once()
+            ->andReturn('/usr/bin/php84');
+
+        $devTools->shouldReceive('getBin')
+            ->with('php84', ['/usr/local/bin/php'])
+            ->once()
+            ->andReturn('/usr/bin/php84');
+
+        $binFile = $this->phpFpm->getPhpExecutablePath();
+
+        $this->assertSame('/usr/bin/php84', $binFile);
+    }
+
+    /**
+     * @test
+     */
+    public function itWillFallbackToConfiguredBinaryWhenNoVersionIsSet(): void
+    {
+        $this->config
+            ->shouldReceive('get')
+            ->with('php_version')
+            ->once()
+            ->andReturnNull();
+
+        $this->config
+            ->shouldReceive('get')
+            ->with('fallback_binary')
+            ->once()
+            ->andReturn('/usr/bin/php84');
+
+        $binFile = $this->phpFpm->getPhpExecutablePath();
+
+        $this->assertSame('/usr/bin/php84', $binFile);
     }
 
     /**

@@ -18,13 +18,6 @@ class Pacman implements PackageManager
      * @var ServiceManager
      */
     public $serviceManager;
-    /**
-     * @var array
-     */
-    public const PHP_FPM_PATTERN_BY_VERSION = [
-        '8.4' => 'php-fpm'
-    ];
-
     private const PACKAGES = [
         'redis' => 'redis',
         'mysql' => 'mysql',
@@ -75,8 +68,32 @@ class Pacman implements PackageManager
     {
         Writer::twoColumnDetail($package, 'Installing');
 
+        $targets = preg_split('/\s+/', trim($package), -1, PREG_SPLIT_NO_EMPTY);
+        $packageArguments = implode(' ', array_map('escapeshellarg', $targets ?: []));
+
+        if ($this->isVersionedPhpPackage($package)) {
+            $helper = trim($this->cli->runAsUser('command -v yay || command -v paru'));
+
+            if ($helper === '') {
+                throw new DomainException(
+                    'An AUR helper (yay or paru) is required to install ['.$package.'].'
+                );
+            }
+
+            $this->cli->runAsUser(
+                escapeshellarg($helper).' -S --noconfirm --needed '.$packageArguments,
+                function ($exitCode, $errorOutput) use ($package) {
+                    Writer::error(\sprintf('%s: %s', $exitCode, $errorOutput));
+
+                    throw new DomainException('AUR helper was unable to install ['.$package.'].');
+                }
+            );
+
+            return;
+        }
+
         $this->cli->run(
-            trim('pacman --noconfirm --needed -S '.$package),
+            'pacman --noconfirm --needed -S '.$packageArguments,
             function ($exitCode, $errorOutput) use ($package) {
                 Writer::error(\sprintf('%s: %s', $exitCode, $errorOutput));
 
@@ -114,11 +131,19 @@ class Pacman implements PackageManager
      */
     public function getPhpFpmName(string $version): string
     {
-        $pattern = !empty(self::PHP_FPM_PATTERN_BY_VERSION[$version])
-            ? self::PHP_FPM_PATTERN_BY_VERSION[$version] : 'php{VERSION_WITHOUT_DOT}-fpm';
         $version = preg_replace('~[^\d]~', '', $version);
 
-        return str_replace('{VERSION_WITHOUT_DOT}', $version, $pattern);
+        return 'php'.$version.'-fpm';
+    }
+
+    /**
+     * Determine php cli executable path.
+     */
+    public function getPhpCliPath(string $version): string
+    {
+        $version = preg_replace('~[^\d]~', '', $version);
+
+        return '/usr/bin/php'.$version;
     }
 
     /**
@@ -156,5 +181,22 @@ class Pacman implements PackageManager
             return self::PACKAGES[$name];
         }
         throw new \InvalidArgumentException(\sprintf('Package not found by %s', $name));
+    }
+
+    private function isVersionedPhpPackage(string $package): bool
+    {
+        $targets = preg_split('/\s+/', trim($package), -1, PREG_SPLIT_NO_EMPTY);
+
+        if (!$targets) {
+            return false;
+        }
+
+        foreach ($targets as $target) {
+            if (!preg_match('/^php\d{2,3}-/', $target)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

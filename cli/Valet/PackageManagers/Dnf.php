@@ -112,6 +112,14 @@ class Dnf implements PackageManager
     }
 
     /**
+     * Determine php cli executable path.
+     */
+    public function getPhpCliPath(string $version): string
+    {
+        return '/usr/bin/php'.$version;
+    }
+
+    /**
      * Get the `ca-certificates` directory
      */
     public function getCaCertificatesPath(): string
