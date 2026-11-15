@@ -103,11 +103,17 @@ if (!function_exists('tap')) {
  */
 function user(): string
 {
-    if (!isset($_SERVER['SUDO_USER'])) {
+    if (isset($_SERVER['SUDO_USER']) && is_string($_SERVER['SUDO_USER']) && $_SERVER['SUDO_USER'] !== '') {
+        return $_SERVER['SUDO_USER'];
+    }
+
+    if (isset($_SERVER['USER']) && is_string($_SERVER['USER']) && $_SERVER['USER'] !== '') {
         return $_SERVER['USER'];
     }
 
-    return $_SERVER['SUDO_USER'];
+    $userInfo = posix_getpwuid(posix_geteuid());
+
+    return is_array($userInfo) ? $userInfo['name'] : 'root';
 }
 
 /**
@@ -116,11 +122,7 @@ function user(): string
  */
 function group()
 {
-    if (!isset($_SERVER['SUDO_USER'])) {
-        return exec('id -gn '.$_SERVER['USER']);
-    }
-
-    return exec('id -gn '.$_SERVER['SUDO_USER']);
+    return exec('id -gn '.user());
 }
 
 /**

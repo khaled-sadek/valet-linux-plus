@@ -28,8 +28,56 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y network-manager libnss3-tools jq xsel
           composer install --no-interaction --prefer-dist
+      - name: Validate shell scripts
+        run: |
+          bash -n php
+          bash -n valet
       - name: Test
         run: vendor/bin/phpunit
+
+  distro_test:
+    name: Distro Compatibility (${{ matrix.distro.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro:
+          - name: Ubuntu (Apt)
+            image: ubuntu:latest
+            setup: |
+              export DEBIAN_FRONTEND=noninteractive
+              apt-get update
+              apt-get install -y curl git unzip which systemd jq xsel libnss3-tools php-cli php-curl php-mbstring php-xml php-zip composer
+          - name: Fedora (Dnf)
+            image: fedora:latest
+            setup: |
+              dnf install -y curl git unzip which systemd jq xsel nss-tools php-cli php-pdo php-posix php-mbstring php-xml php-pecl-zip php-json composer
+          - name: Arch Linux (Pacman)
+            image: archlinux:latest
+            setup: |
+              pacman -Syu --noconfirm curl git unzip which systemd jq xsel nss php composer
+              sed -i 's/^;extension=\(zip\|iconv\|curl\)/extension=\1/' /etc/php/php.ini
+    container:
+      image: ${{ matrix.distro.image }}
+    env:
+      USER: root
+      HOME: /root
+      COMPOSER_ALLOW_SUPERUSER: 1
+    steps:
+      - name: Install distro dependencies
+        run: ${{ matrix.distro.setup }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Configure Git safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+      - name: Validate shell scripts
+        run: |
+          bash -n php
+          bash -n valet
+      - name: Test
+        run: vendor/bin/phpunit
+
   cs_fixer:
     name: CS Fixer
     runs-on: ubuntu-latest
